@@ -1,0 +1,1 @@
+# HWiNFO64-Server-Hardware-log
