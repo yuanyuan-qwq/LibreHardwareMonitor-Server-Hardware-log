@@ -23,7 +23,7 @@ def build_report_message(
     history: Sequence[Mapping[str, object]],
     display_labels: Mapping[str, str],
 ) -> EmailMessage:
-    """Build a multipart message with temperature and CPU/GPU usage charts."""
+    """Build a multipart message with temperature and CPU/GPU/RAM usage charts."""
     temperature_chart = _render_chart(
         history,
         _temperature_series(current_record, display_labels),
@@ -31,8 +31,12 @@ def build_report_message(
     )
     resource_chart = _render_chart(
         history,
-        [("cpu_usage_percent", "CPU usage"), ("gpu_usage_percent", "GPU usage")],
-        "CPU and GPU usage trend (%)",
+        [
+            ("cpu_usage_percent", "CPU usage"),
+            ("gpu_usage_percent", "GPU usage"),
+            ("ram_used_percent", "RAM usage"),
+        ],
+        "CPU, GPU and RAM usage trend (%)",
     )
 
     message = EmailMessage()
@@ -81,7 +85,7 @@ def _build_html(record: Mapping[str, object], display_labels: Mapping[str, str])
 <h2>Hardware monitor report</h2><p>Sample time: {html.escape(str(record['timestamp']))}</p>
 <table border="1" cellpadding="7" cellspacing="0" style="border-collapse:collapse">{rows}{partition_rows}</table>
 <h2>Today&apos;s trend</h2><h3>Temperature</h3><img src="cid:temperature-trend" alt="Temperature trend">
-<h3>CPU and GPU usage</h3><img src="cid:resource-trend" alt="CPU and GPU usage trend">
+<h3>CPU, GPU and RAM usage</h3><img src="cid:resource-trend" alt="CPU, GPU and RAM usage trend">
 </body></html>"""
 
 
