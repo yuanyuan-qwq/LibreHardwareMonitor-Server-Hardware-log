@@ -4,6 +4,8 @@ import csv
 import json
 from datetime import date
 
+import pytest
+
 from hwmonitor.daily_log import append_daily_record, read_daily_records
 
 
@@ -90,3 +92,23 @@ def test_expands_existing_header_and_preserves_old_rows(tmp_path):
             "gpu_hotspot_temp_c": "66.0",
         },
     ]
+
+
+def test_rejects_schema_contraction_without_changing_existing_csv(tmp_path):
+    path = tmp_path / "lhm_20260815.csv"
+    original = b"timestamp,gpu_temp_c\r\n2026-08-15T09:00:00,52.0\r\n"
+    path.write_bytes(original)
+
+    with pytest.raises(
+        ValueError,
+        match="Existing CSV has fields not present in the requested schema:.*gpu_temp_c",
+    ):
+        append_daily_record(
+            tmp_path,
+            date(2026, 8, 15),
+            {"timestamp": "2026-08-15T10:00:00"},
+            ["timestamp"],
+            path_factory=lambda directory, day: path,
+        )
+
+    assert path.read_bytes() == original
