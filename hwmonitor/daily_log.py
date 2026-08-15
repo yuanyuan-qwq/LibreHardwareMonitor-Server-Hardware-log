@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import csv
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
@@ -65,3 +65,29 @@ def read_daily_records(path: str | Path) -> list[dict[str, str]]:
     """Read successfully recorded same-day samples for reporting."""
     with Path(path).open("r", newline="", encoding="utf-8") as stream:
         return list(csv.DictReader(stream))
+
+
+def delete_expired_lhm_logs(
+    log_directory: str | Path,
+    today: date,
+    retention_days: int = 7,
+) -> list[Path]:
+    """Delete dated LHM CSV files older than the inclusive retention window."""
+    if retention_days < 1:
+        raise ValueError("retention_days must be at least 1")
+
+    directory = Path(log_directory)
+    if not directory.exists():
+        return []
+
+    cutoff = today - timedelta(days=retention_days - 1)
+    deleted: list[Path] = []
+    for path in directory.glob("lhm_????????.csv"):
+        try:
+            file_day = datetime.strptime(path.stem.removeprefix("lhm_"), "%Y%m%d").date()
+        except ValueError:
+            continue
+        if file_day < cutoff:
+            path.unlink()
+            deleted.append(path)
+    return deleted

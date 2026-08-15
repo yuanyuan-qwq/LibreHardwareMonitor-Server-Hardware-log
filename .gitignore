@@ -1,0 +1,12 @@
+__pycache__/
+.pytest_cache/
+.idea/
+config.py
+logs/
+*.log
+hwLog/
+collector/bin/
+collector/obj/
+collector.tests/bin/
+collector.tests/obj/
+collector/publish/

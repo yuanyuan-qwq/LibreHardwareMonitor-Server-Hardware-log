@@ -1,6 +1,6 @@
 # LibreHardwareMonitor Server Hardware Log
 
-The hourly Windows task runs a self-contained LibreHardwareMonitor collector once, sends a Gmail HTML report with CPU/GPU trend charts, appends the successful sample to `hwLog/daily_reports/lhm_YYYYMMDD.csv`, and exits. It does not use a GUI or leave a hardware-monitor process running.
+Three Windows tasks collect LibreHardwareMonitor data hourly, send one Gmail HTML report at 11:59 PM, and retain only the latest seven calendar days of LHM daily CSV files. The collector does not use a GUI or remain running between samples.
 
 ## Setup
 
@@ -24,29 +24,39 @@ The hourly Windows task runs a self-contained LibreHardwareMonitor collector onc
 
 4. Inspect `hwLog/lhm_sensor_inventory.json` and confirm the configured identifiers exist. If LHM reuses an identifier, the collector appends a stable `~sensor-name` suffix so every inventory identifier remains unique.
 
-5. From an elevated PowerShell, install the task:
+5. From an elevated PowerShell, install the tasks:
 
    ```powershell
    .\install_scheduled_tasks.ps1
    ```
 
-   The script prompts for the current Windows account password and registers `LibreHardwareMonitor - Send Hourly Report` with highest privileges and Password logon, so it can run while the account is logged out.
+   The script prompts once for the current Windows account password and registers these highest-privilege tasks so they can run while the account is logged out:
+
+   - `LibreHardwareMonitor - Collect Hourly` at the top of every hour
+   - `LibreHardwareMonitor - Send Daily Report` daily at 11:59 PM
+   - `LibreHardwareMonitor - Cleanup Daily Logs` daily at 12:15 AM
+
+   The installer also removes the obsolete `HWiNFO64 - Send Hourly Report` and `LibreHardwareMonitor - Send Hourly Report` tasks when present.
 
 ## Sensor mapping and report flow
 
 GPU Core, GPU Hot Spot, ADATA NVMe Composite, HFS SSD, and WDC HDD temperatures are recorded when exposed by the current inventory. This host's elevated inventory does not expose CPU or DIMM Temperature sensors, so those fields are intentionally absent. NVMe temperature/10 and temperature/11 are warning/critical limits and are not logged as live readings.
 
-The current day's `hwLog/daily_reports/lhm_YYYYMMDD.csv` is the source for the same-day graph. The in-memory current sample is added before the graph is rendered, so the emailed chart includes the newest readings. The row is appended to the daily CSV only after successful SMTP delivery. When the configured sensor set changes, the CSV header is expanded and older rows receive blank values for the new columns.
+The hourly collection task appends each successful sample directly to the current day's `hwLog/daily_reports/lhm_YYYYMMDD.csv` without sending mail. At 11:59 PM, the report task reads the complete CSV, uses its last row as the current state, generates the temperature and CPU/GPU/RAM usage graphs from the day's rows, and sends one email. Reporting never appends another row.
+
+The cleanup task keeps today and the previous six calendar days, for a maximum of seven current `lhm_YYYYMMDD.csv` files. It never removes historical `hw_*.csv`, the sensor inventory, error logs, or unrelated files. When the configured sensor set changes, the current CSV header is expanded and older rows receive blank values for the new columns.
 
 ## Verify
 
-Run one report manually:
+Run each operation manually:
 
 ```powershell
-py run_monitor.py
+py run_monitor.py collect
+py run_monitor.py report
+py run_monitor.py cleanup
 ```
 
-Success creates or appends `hwLog/daily_reports/lhm_YYYYMMDD.csv` and sends the email. Failures write a UTF-8 error log under `hwLog/error_logs`; no daily row is added on failure. Historical `hw_*.csv` files are retained unchanged and are not used by LHM reports.
+`collect` creates or appends today's CSV. `report` sends the email only when today's CSV contains at least one sample. `cleanup` applies the seven-day retention window. Failures write a UTF-8 error log under `hwLog/error_logs`. Historical `hw_*.csv` files are retained unchanged and are not used by LHM reports.
 
 ## Development
 

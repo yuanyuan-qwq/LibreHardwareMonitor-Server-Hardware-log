@@ -7,6 +7,7 @@ HWLOG_DIRECTORY = PROJECT_DIRECTORY / "hwLog"
 DAILY_LOG_DIRECTORY = HWLOG_DIRECTORY / "daily_reports"
 ERROR_LOG_DIRECTORY = HWLOG_DIRECTORY / "error_logs"
 LHM_INVENTORY_PATH = HWLOG_DIRECTORY / "lhm_sensor_inventory.json"
+DAILY_LOG_RETENTION_DAYS = 7
 
 # Build with: dotnet publish collector/LibreHardwareMonitorCollector.csproj -c Release -r win-x64 --self-contained true -o collector/publish/win-x64
 LHM_COLLECTOR_EXECUTABLE = PROJECT_DIRECTORY / "collector" / "publish" / "win-x64" / "LibreHardwareMonitorCollector.exe"
